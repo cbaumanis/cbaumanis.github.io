@@ -1,0 +1,17 @@
+---
+title: Project 1
+author: ''
+date: '2021-05-10'
+slug: project-1
+categories: []
+tags: []
+description: ''
+---
+
+Looking at Spotify history and weather!
+[Link to project 1](/project/project1/)
+[link to google](https://www.google.com)
+
+```{r}
+
+```

@@ -1,8 +1,181 @@
 ---
-title: "Project 1"
-author: "Me"
-date: "2020-12-01"
-output: html_document
+title: "Project 1: An Exploratory Analysis of My Spotify Listening Data and Weather"
+author: "Carolina Baumanis"
+date: "3/29/2021"
+html_document:
+    toc: true
+    toc_float:
+      collapsed: false
 ---
 
-## Test Project 1
+```{r global_options, include=FALSE}
+#DO NOT EDIT THIS CHUNK OR ANYTHING ABOVE IT!
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F, tidy=T, tidy.opts=list(width.cutoff=50), R.options=list(max.print=100,dplyr.print_max=100))
+```
+
+The two datasets explored in this project come from my Spotify listening history and from a weather station located  Camp Mabry in Austin, TX. Spotify listening history was requested through the Spotify website, and the weather station data came from the National Oceanic and Atmospheric Administration (NOAA) website. The time period of interest for this exploratory analysis is between March 6, 2020 and March 6, 2021. 
+
+## Required Libraries
+First things first. Loading up the required libraries.
+```{r}
+library(tidyverse)
+library(jsonlite)
+library(dplyr)
+library(lubridate)
+library(gghighlight)
+library(cluster)
+library(GGally)
+```
+
+## Loading data
+Next, reading in the data from Spotify and from NOAA.
+```{r}
+streamhist0 <- fromJSON("StreamingHistory0.json")
+streamhist1 <- fromJSON("StreamingHistory1.json")
+weather <- read_csv("2526455.csv")
+```
+
+## Reshaping Data
+Here, the two streaming history files are cleaned up by combining them into a single dataset. The date and time information are separated into two columns to allow joining to the weather dataset more easily later on. Also, the date column is converted from a *character* format to a *date* format for both datasets.
+```{r}
+streamhist <- rbind(streamhist0, streamhist1)
+streamhist <- streamhist %>% separate(endTime, sep = " ", into = c("date", "time")) 
+streamhist$date <- as.Date(streamhist$date)
+weather$DATE <- as.Date(weather$DATE, "%m/%d/%Y")
+```
+
+## Joining two separate data sources
+I did a left join to join the weather data to my Spotify listening history data. A left join works for this case because I want to retain all of my Spotify data, and I'm only interested in the weather data that matches my Spotify listening observations. The left join matches each listening observation to each weather observation based on the date information, which is present in both datasets. There were 19428 observations for the `streamhist` data and 386 observations for the `weather` data.
+```{r}
+fulldata <- left_join(streamhist, weather, by = c("date"="DATE"))
+```
+
+
+## Create summary statistics
+An additional column that contains the day of week has been added. For the weather data, the Camp Mabry data because it contains temperature information.
+```{r}
+##Using all six core functions to manipulate and explore dataset
+
+#adding day of week label
+fulldata <- fulldata %>% mutate(dayofweek=wday(date, label = T)) 
+
+#using pivot wider to summarize msPlayed by each artist
+fulldata %>% pivot_wider(names_from = artistName, values_from = msPlayed, values_fn = sum)
+
+#total hours of music played each month: most hours played in October 2020
+fulldata %>% select(date, msPlayed) %>% group_by(date = floor_date(date, "month")) %>% summarize(hrs_played = sum(msPlayed)/3.6e+6) %>% arrange(-hrs_played)
+
+#most popular artists in October and TAVG for each of those
+fulldata %>% select(date, msPlayed, artistName, TMAX) %>% group_by(date = floor_date(date, "month"), artistName, TMAX) %>% summarize(hrs_played = sum(msPlayed)/3.6e+6) %>% arrange(-hrs_played)
+
+#total no. of hours played by day of week
+fulldata %>% select(dayofweek, msPlayed) %>% group_by(dayofweek) %>% summarize(total_hrs = sum(msPlayed)/3.6e+6)
+
+#artist with most no. of hours played
+fulldata %>% select(artistName,msPlayed) %>% group_by(artistName) %>% summarize(total_hrs = sum(msPlayed)/3.6e+6) %>% arrange(-total_hrs) 
+
+#song with most no. of hours played
+fulldata %>% select(trackName, artistName, msPlayed) %>% group_by(trackName, artistName) %>% summarize(total_hrs = sum(msPlayed)/3.6e+6) %>% arrange(-total_hrs) 
+
+##Creating summary stats for each numeric variable (msPlayed, TMIN, TMAX, and PRCP)
+
+#creating summary stats for msPlayed, Tmin, TMAX, and PRCP overall
+fulldata %>% select(msPlayed, TMIN, TMAX, PRCP) %>% mutate(minPlayed = msPlayed/60000) %>% summarize_all(mean)
+fulldata %>% select(msPlayed, TMIN, TMAX, PRCP) %>% mutate(minPlayed = msPlayed/60000) %>% summarize_all(sd)
+fulldata %>% select(msPlayed, TMIN, TMAX, PRCP) %>% mutate(minPlayed = msPlayed/60000) %>% summarize_all(min)
+fulldata %>% select(msPlayed, TMIN, TMAX, PRCP) %>% mutate(minPlayed = msPlayed/60000) %>% summarize_all(max)
+
+#creating summary stats for grouping by artistName & day of week 
+fulldata %>% select(msPlayed, TMIN, TMAX, PRCP, AWND, artistName, dayofweek) %>% group_by(dayofweek, artistName) %>% summarize(total_hrs = sum(msPlayed)/3.6e+6, mean_tmin = mean(TMIN), mean_tmax = mean(TMAX), mean_prcp=mean(PRCP), mean_windsp = mean(AWND)) %>% arrange(-total_hrs)
+
+#creating summary stats for grouping by trackName & day of week 
+fulldata %>% select(msPlayed, TMIN, TMAX, PRCP, AWND, trackName, dayofweek) %>% group_by(dayofweek, trackName) %>% summarize(total_hrs = sum(msPlayed)/3.6e+6, mean_tmin = mean(TMIN), mean_tmax = mean(TMAX), mean_prcp=mean(PRCP), mean_windsp = mean(AWND)) %>% arrange(-total_hrs)
+
+#creating summary stats for grouping by artist & month
+fulldata %>% select(date, msPlayed, TMIN, TMAX, PRCP, AWND, artistName, dayofweek) %>% group_by(artistName,month = floor_date(date, "month")) %>% summarize(total_hrs = sum(msPlayed)/3.6e+6, mean_tmin = mean(TMIN), mean_tmax = mean(TMAX), mean_prcp=mean(PRCP), mean_windsp = mean(AWND)) %>% arrange(-total_hrs)
+
+#creating summary stats for grouping by trackName & month
+trackmonth <- fulldata %>% select(date, msPlayed, TMIN, TMAX, PRCP, AWND, trackName, dayofweek) %>% group_by(trackName,month = floor_date(date, "month")) %>% summarize(total_hrs = sum(msPlayed)/3.6e+6, mean_tmin = mean(TMIN), mean_tmax = mean(TMAX), mean_prcp=mean(PRCP), mean_windsp = mean(AWND)) %>% arrange(-total_hrs)
+
+#creating summary stats by grouping by month & day of week
+monthday <- fulldata %>% select(date, msPlayed, TMIN, TMAX, PRCP, AWND, trackName, dayofweek) %>% group_by(month = floor_date(date, "month"), dayofweek) %>% summarize(total_hrs = sum(msPlayed)/3.6e+6, mean_tmin = mean(TMIN), mean_tmax = mean(TMAX), mean_prcp=mean(PRCP), mean_windsp = mean(AWND)) %>% arrange(month, dayofweek)
+
+#correlation matrix for numeric variables
+cormat <- fulldata %>% select(msPlayed,TMIN,TMAX,PRCP,AWND) %>% cor(use = "pair")
+  
+```
+
+
+## Make visualizations
+Most of the variables are only slightly negatively correlated. The only two variables that have a strong positive correlation are TMAX and TMIN.
+```{r}
+##Correlation Heat Map of Numeric Variables
+tidycor <- cormat %>% as.data.frame() %>% rownames_to_column("var1") %>% pivot_longer(-1,names_to = "var2", values_to = "correlation")
+
+tidycor %>% ggplot(aes(var1,var2,fill = correlation)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "red",mid = "white",high = "blue") + 
+  geom_text(aes(label=round(correlation,2)), color = "black", size = 4) 
+
+```
+
+This plot shows the total number of hours of Spotify played for each month. For each day of the week, the total number of hours were added up together and stacked into a column to show the total number of hours listened per month. Overall, April and October were the two months with the most hours listened. In terms of day of the week, July, September, and January, had Saturdays clocking in the most hours listened.
+```{r}
+## Which months did I listen to more or less Spotify?
+monthday %>% mutate(dayofweek = as.factor(dayofweek)) %>% 
+  ggplot(aes(month, total_hrs)) +
+  geom_col(aes(fill=dayofweek)) +
+  labs(x= "Date", y= "Hours of music playback") +
+  scale_x_date(breaks ="1 month", date_labels = "%B %Y", expand = c(0,0)) +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  ggtitle("Which months did I listen to more or less Spotify?") 
+```
+Each line on this plot represents a song that was played. My top three songs are highlighted in green, blue, and red. It looks like I listened to my favorite songs of the year the most during the month of August (where I actually did a road trip between Austin and Phoenix). While I still love these songs, my hours listened tapered off over time as I found new favorite songs.
+```{r}
+## On what dates did I listen to my top 3 songs? 
+trackmonth %>% ggplot(aes(month, total_hrs, group = trackName)) +
+  labs(x= "Date", y= "Hours of music playback") + 
+  scale_x_date(breaks ="1 month", date_labels = "%B %Y", expand = c(0,0)) +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  ggtitle("Which months did I listen to my top 3 songs?") +
+  geom_line(aes(color = trackName)) + 
+  gghighlight(trackName == "Hawái" || trackName == "La Curiosidad" || trackName == "Ay, DiOs Mío!" ) 
+```
+
+
+## Perform k-means/PAM clustering on numeric variables
+I performed PAM clustering on msPlayed and various weather-related numeric variables to see if there's any regularity in the data. I tested up to five clusters to see what is the optimal number of clusters based on silhouette width. PAM clustering was computationally expensive on this dataset of 19428 observations. 
+```{r, eval=FALSE}
+#PAM clustering 
+PAM_clust <- fulldata %>% select(msPlayed, TMAX, TMIN, AWND, PRCP) %>% scale() %>% as.data.frame()
+
+sil_width <- vector()
+
+for(i in 2:5){
+  pam_fit <- pam(PAM_clust, k = i)
+sil_width[i] <- pam_fit$silinfo$avg.width  
+}
+
+ggplot()+geom_line(aes(x=1:5,y=sil_width))+scale_x_continuous(name="k",breaks=1:5)
+
+```
+Here, the correlation matrix shows that msPlayed has the strongest (negative) correlation with min temperature for the day, TMIN, and the weakest correlation with precipitation, PRCP.The group 1 (red) captures amount of time listened to Spotify on days where TMIN is about 60 degrees or colder, and group 2(blue) caputres the amount of time listened when TMIN ishigher than 60 degrees.
+```{r, eval = FALSE}
+pam1 <- pam(PAM_clust, 2)
+
+fulldata %>% mutate(cluster=as.factor(pam1$clustering)) %>% 
+ggpairs(columns = c("msPlayed", "TMAX", "TMIN", "AWND", "PRCP"), aes(color=cluster))
+```
+
+The average silhouette width 0.29 means that the structure of the clusters is weak and could be artificial. Therefore, the PAM clustering with two clusters did not fit the data very well.
+
+The mean of each numeric variable is shown in the final table. Cluster 1 are longer songs (probably podcasts) I listened when temperatures and wind speed were low, but precipitation was higher. Cluster 2 are shorter duration plays (songs) when temperatures and wind speed are higher, and precipitation is lower.
+```{r, eval = FALSE}
+plot(pam1, which=2, border=NA)
+windows()
+
+pamclust <- PAM_clust %>% mutate(cluster=as.factor(pam1$clustering)) 
+pamclust %>% group_by(cluster) %>% summarize_all(mean)
+```
+
+

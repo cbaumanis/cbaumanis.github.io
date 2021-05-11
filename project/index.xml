@@ -5,24 +5,24 @@
     <link>/project/</link>
     <description>Recent content in Projects on Carolina Baumanis</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-US</language>
-    <lastBuildDate>Tue, 01 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/project/index.xml" rel="self" type="application/rss+xml" />
+    <language>en-US</language><atom:link href="/project/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Project 1</title>
+      <title>Project 1: An Exploratory Analysis of My Spotify Listening Data and Weather</title>
       <link>/project/project1/</link>
-      <pubDate>Tue, 01 Dec 2020 00:00:00 +0000</pubDate>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/project/project1/</guid>
-      <description> Test Project 1  </description>
+      <description>The two datasets explored in this project come from my Spotify listening history and from a weather station located Camp Mabry in Austin, TX. Spotify listening history was requested through the Spotify website, and the weather station data came from the National Oceanic and Atmospheric Administration (NOAA) website. The time period of interest for this exploratory analysis is between March 6, 2020 and March 6, 2021.
+Required Libraries First things first.</description>
     </item>
     
     <item>
-      <title>Project 2</title>
+      <title>Project 2: Modeling, Testing, and Predicting Bicycle Signal Safety</title>
       <link>/project/project2/</link>
-      <pubDate>Tue, 01 Dec 2020 00:00:00 +0000</pubDate>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/project/project2/</guid>
-      <description> Test Project 2  </description>
+      <description>Data Overview The dataset explored in this project comes from a bicycle signal installation experiment done in Austin, TX. At each of the 12 intersections, UT-CTR captured video recordings before and after bicycle silhouette signal faces were installed by the City of Austin. Each video captures at least 40 least 40 times when a cyclist and vehicle cross each other’s path while traveling through the intersection (called an interaction).</description>
     </item>
     
   </channel>

@@ -1,0 +1,26 @@
+---
+title: Reticulate package lets R and Python play together!
+author: ''
+date: '2021-05-09'
+slug: my-second-post
+categories: []
+tags: []
+description: ''
+---
+
+Here is my post!
+
+
+
+```{r}
+library(reticulate)
+hi <- "hello"
+```
+
+```{python}
+hi = "world"
+print(r.hi,hi)
+```
+
+
+![](/post/2021-05-10-my-second-post_files/Screen Shot 2020-10-15 at 3.59.49 PM.png)

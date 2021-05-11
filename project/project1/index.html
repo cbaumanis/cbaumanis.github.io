@@ -7,7 +7,7 @@
     <meta name="author" content="Carolina Baumanis" />
     
     <link rel="shortcut icon" type="image/x-icon" href="../../img/favicon.ico">
-    <title>Project 1</title>
+    <title>Project 1: An Exploratory Analysis of My Spotify Listening Data and Weather</title>
     <meta name="generator" content="Hugo 0.83.1" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="../../css/main.css" />
@@ -54,13 +54,13 @@
       <div class="container">
         <div class="blog-post">
           <h3>
-            <strong><a href="../../project/project1/">Project 1</a></strong>
+            <strong><a href="../../project/project1/">Project 1: An Exploratory Analysis of My Spotify Listening Data and Weather</a></strong>
           </h3>
         </div>
  
 <div class="blog-title">
           <h4>
-         December 1, 2020 
+         January 1, 0001 
             &nbsp;&nbsp;
             
           </h4>
@@ -72,8 +72,360 @@
               
 
 
-<div id="test-project-1" class="section level2">
-<h2>Test Project 1</h2>
+<p>The two datasets explored in this project come from my Spotify listening history and from a weather station located Camp Mabry in Austin, TX. Spotify listening history was requested through the Spotify website, and the weather station data came from the National Oceanic and Atmospheric Administration (NOAA) website. The time period of interest for this exploratory analysis is between March 6, 2020 and March 6, 2021.</p>
+<div id="required-libraries" class="section level2">
+<h2>Required Libraries</h2>
+<p>First things first. Loading up the required libraries.</p>
+<pre class="r"><code>library(tidyverse)
+library(jsonlite)
+library(dplyr)
+library(lubridate)
+library(gghighlight)
+library(cluster)
+library(GGally)</code></pre>
+</div>
+<div id="loading-data" class="section level2">
+<h2>Loading data</h2>
+<p>Next, reading in the data from Spotify and from NOAA.</p>
+<pre class="r"><code>streamhist0 &lt;- fromJSON(&quot;StreamingHistory0.json&quot;)
+streamhist1 &lt;- fromJSON(&quot;StreamingHistory1.json&quot;)
+weather &lt;- read_csv(&quot;2526455.csv&quot;)</code></pre>
+</div>
+<div id="reshaping-data" class="section level2">
+<h2>Reshaping Data</h2>
+<p>Here, the two streaming history files are cleaned up by combining them into a single dataset. The date and time information are separated into two columns to allow joining to the weather dataset more easily later on. Also, the date column is converted from a <em>character</em> format to a <em>date</em> format for both datasets.</p>
+<pre class="r"><code>streamhist &lt;- rbind(streamhist0, streamhist1)
+streamhist &lt;- streamhist %&gt;% separate(endTime, sep = &quot; &quot;, 
+    into = c(&quot;date&quot;, &quot;time&quot;))
+streamhist$date &lt;- as.Date(streamhist$date)
+weather$DATE &lt;- as.Date(weather$DATE, &quot;%m/%d/%Y&quot;)</code></pre>
+</div>
+<div id="joining-two-separate-data-sources" class="section level2">
+<h2>Joining two separate data sources</h2>
+<p>I did a left join to join the weather data to my Spotify listening history data. A left join works for this case because I want to retain all of my Spotify data, and I’m only interested in the weather data that matches my Spotify listening observations. The left join matches each listening observation to each weather observation based on the date information, which is present in both datasets. There were 19428 observations for the <code>streamhist</code> data and 386 observations for the <code>weather</code> data.</p>
+<pre class="r"><code>fulldata &lt;- left_join(streamhist, weather, by = c(date = &quot;DATE&quot;))</code></pre>
+</div>
+<div id="create-summary-statistics" class="section level2">
+<h2>Create summary statistics</h2>
+<p>An additional column that contains the day of week has been added. For the weather data, the Camp Mabry data because it contains temperature information.</p>
+<pre class="r"><code>## Using all six core functions to manipulate and
+## explore dataset
+
+# adding day of week label
+fulldata &lt;- fulldata %&gt;% mutate(dayofweek = wday(date, 
+    label = T))
+
+# using pivot wider to summarize msPlayed by each
+# artist
+fulldata %&gt;% pivot_wider(names_from = artistName, values_from = msPlayed, 
+    values_fn = sum)</code></pre>
+<pre><code>## # A tibble: 19,264 x 3,062
+##    date       time  trackName STATION NAME   AWND  PRCP  SNOW  SNWD TAVG   TMAX
+##    &lt;date&gt;     &lt;chr&gt; &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;lgl&gt; &lt;dbl&gt;
+##  1 2020-03-06 00:01 Rojo      USW000… AUST…  4.92     0     0     0 NA       71
+##  2 2020-03-06 00:03 Ganas de… USW000… AUST…  4.92     0     0     0 NA       71
+##  3 2020-03-06 04:16 Caribou … USW000… AUST…  4.92     0     0     0 NA       71
+##  4 2020-03-06 04:20 De Vez E… USW000… AUST…  4.92     0     0     0 NA       71
+##  5 2020-03-06 04:22 algo due… USW000… AUST…  4.92     0     0     0 NA       71
+##  6 2020-03-06 04:23 No es pa… USW000… AUST…  4.92     0     0     0 NA       71
+##  7 2020-03-06 04:23 Rojo      USW000… AUST…  4.92     0     0     0 NA       71
+##  8 2020-03-06 04:23 algo due… USW000… AUST…  4.92     0     0     0 NA       71
+##  9 2020-03-06 04:23 Ayer      USW000… AUST…  4.92     0     0     0 NA       71
+## 10 2020-03-06 04:26 Encima D… USW000… AUST…  4.92     0     0     0 NA       71
+## # … with 19,254 more rows, and 3,051 more variables: TMIN &lt;dbl&gt;, TOBS &lt;lgl&gt;,
+## #   WDF2 &lt;dbl&gt;, WDF5 &lt;dbl&gt;, WESD &lt;lgl&gt;, WESF &lt;lgl&gt;, WSF2 &lt;dbl&gt;, WSF5 &lt;dbl&gt;,
+## #   WT01 &lt;dbl&gt;, WT02 &lt;dbl&gt;, WT03 &lt;dbl&gt;, WT04 &lt;dbl&gt;, WT05 &lt;lgl&gt;, WT06 &lt;dbl&gt;,
+## #   WT08 &lt;dbl&gt;, WT09 &lt;lgl&gt;, dayofweek &lt;ord&gt;, `J Balvin` &lt;int&gt;, `Wisin &amp;
+## #   Yandel` &lt;int&gt;, `Tech N9ne` &lt;int&gt;, `Johan Sotelo` &lt;int&gt;, `Natalia
+## #   Lacunza` &lt;int&gt;, `Carlos Baute` &lt;int&gt;, `Leo Bash` &lt;int&gt;, `Alejandro
+## #   Santamaria` &lt;int&gt;, Residente &lt;int&gt;, Arevalo &lt;int&gt;, `Bad Bunny` &lt;int&gt;, `Jary
+## #   Franco` &lt;int&gt;, Maluma &lt;int&gt;, `Kany Garcia` &lt;int&gt;, `Natti Natasha` &lt;int&gt;,
+## #   `Rauw Alejandro` &lt;int&gt;, `Ovy On The Drums` &lt;int&gt;, `Andy Rivera` &lt;int&gt;,
+## #   `Piso 21` &lt;int&gt;, `Abraham Mateo` &lt;int&gt;, `Cali Y El Dandee` &lt;int&gt;,
+## #   Juanes &lt;int&gt;, Maná &lt;int&gt;, Dalex &lt;int&gt;, `Alaina Castillo` &lt;int&gt;, `Christian
+## #   Nodal` &lt;int&gt;, Morat &lt;int&gt;, `Carlos Vives` &lt;int&gt;, Cazzu &lt;int&gt;, `Carlos
+## #   Arroyo` &lt;int&gt;, Fuego &lt;int&gt;, Buscabulla &lt;int&gt;, `The Marías` &lt;int&gt;,
+## #   Rubio &lt;int&gt;, `Jessie Reyez` &lt;int&gt;, `Debi Nova` &lt;int&gt;, `KAROL G` &lt;int&gt;,
+## #   `Anuel AA` &lt;int&gt;, `Daddy Yankee` &lt;int&gt;, `Nicky Jam` &lt;int&gt;, Shakira &lt;int&gt;,
+## #   `Myke Towers` &lt;int&gt;, `Dímelo Flow` &lt;int&gt;, `Sebastian Yatra` &lt;int&gt;, `Viva
+## #   Latino: Original Videos` &lt;int&gt;, `Chicano Batman` &lt;int&gt;, `Jenni
+## #   Rivera` &lt;int&gt;, `Joan Sebastian` &lt;int&gt;, `Salt Cathedral` &lt;int&gt;, `Río
+## #   Roma` &lt;int&gt;, Guaynaa &lt;int&gt;, Brytiago &lt;int&gt;, `Kidd Keo` &lt;int&gt;, `Lenny
+## #   Tavárez` &lt;int&gt;, `Mau y Ricky` &lt;int&gt;, `Ricky Martin` &lt;int&gt;, Lasso &lt;int&gt;,
+## #   `Josue Alaniz` &lt;int&gt;, `Ricardo Montaner` &lt;int&gt;, Lucah &lt;int&gt;, `Pablo
+## #   Alborán` &lt;int&gt;, Matisse &lt;int&gt;, `Alejandro Fernández` &lt;int&gt;, `Alejandro
+## #   Sanz` &lt;int&gt;, `Christian Daniel` &lt;int&gt;, `Noel Schajris` &lt;int&gt;, Zeri &lt;int&gt;,
+## #   Camila &lt;int&gt;, `Carolina Ross` &lt;int&gt;, Fonseca &lt;int&gt;, Mijares &lt;int&gt;, `José
+## #   Luis Perales` &lt;int&gt;, `Paula Arenas` &lt;int&gt;, `Sofia Ellar` &lt;int&gt;, `Steve
+## #   Aoki` &lt;int&gt;, `Marko Silva` &lt;int&gt;, `Playa Limbo` &lt;int&gt;, `Romeo El
+## #   Santo` &lt;int&gt;, Blenfre &lt;int&gt;, Carriazo &lt;int&gt;, Buxxi &lt;int&gt;, `J Carva` &lt;int&gt;,
+## #   `Ralphy Dreamz` &lt;int&gt;, …</code></pre>
+<pre class="r"><code># total hours of music played each month: most
+# hours played in October 2020
+fulldata %&gt;% select(date, msPlayed) %&gt;% group_by(date = floor_date(date, 
+    &quot;month&quot;)) %&gt;% summarize(hrs_played = sum(msPlayed)/3600000) %&gt;% 
+    arrange(-hrs_played)</code></pre>
+<pre><code>## # A tibble: 13 x 2
+##    date       hrs_played
+##    &lt;date&gt;          &lt;dbl&gt;
+##  1 2020-10-01       93.8
+##  2 2020-04-01       93.4
+##  3 2020-07-01       68.1
+##  4 2020-08-01       67.6
+##  5 2020-03-01       66.4
+##  6 2020-09-01       64.8
+##  7 2020-06-01       62.7
+##  8 2021-01-01       62.1
+##  9 2020-11-01       61.4
+## 10 2020-12-01       53.8
+## 11 2020-05-01       53.4
+## 12 2021-02-01       33.9
+## 13 2021-03-01       20.9</code></pre>
+<pre class="r"><code># most popular artists in October and TAVG for each
+# of those
+fulldata %&gt;% select(date, msPlayed, artistName, TMAX) %&gt;% 
+    group_by(date = floor_date(date, &quot;month&quot;), artistName, 
+        TMAX) %&gt;% summarize(hrs_played = sum(msPlayed)/3600000) %&gt;% 
+    arrange(-hrs_played)</code></pre>
+<pre><code>## # A tibble: 11,179 x 4
+## # Groups:   date, artistName [6,372]
+##    date       artistName       TMAX hrs_played
+##    &lt;date&gt;     &lt;chr&gt;           &lt;dbl&gt;      &lt;dbl&gt;
+##  1 2020-04-01 Khalid             89       4.22
+##  2 2020-05-01 Kany Garcia        89       4.07
+##  3 2020-04-01 Khalid             80       3.67
+##  4 2020-06-01 Bossa Nova Jazz    86       2.98
+##  5 2020-08-01 Jerry Di          103       2.68
+##  6 2020-05-01 Kany Garcia        85       2.53
+##  7 2020-11-01 Kany Garcia        84       2.50
+##  8 2020-05-01 Jazz Lounge Bar    95       2.23
+##  9 2020-08-01 Justin Bieber     104       1.80
+## 10 2020-10-01 Khalid             85       1.71
+## # … with 11,169 more rows</code></pre>
+<pre class="r"><code># total no. of hours played by day of week
+fulldata %&gt;% select(dayofweek, msPlayed) %&gt;% group_by(dayofweek) %&gt;% 
+    summarize(total_hrs = sum(msPlayed)/3600000)</code></pre>
+<pre><code>## # A tibble: 7 x 2
+##   dayofweek total_hrs
+## * &lt;ord&gt;         &lt;dbl&gt;
+## 1 Sun           138. 
+## 2 Mon           103. 
+## 3 Tue            88.5
+## 4 Wed           107. 
+## 5 Thu            77.1
+## 6 Fri           130. 
+## 7 Sat           158.</code></pre>
+<pre class="r"><code># artist with most no. of hours played
+fulldata %&gt;% select(artistName, msPlayed) %&gt;% group_by(artistName) %&gt;% 
+    summarize(total_hrs = sum(msPlayed)/3600000) %&gt;% 
+    arrange(-total_hrs)</code></pre>
+<pre><code>## # A tibble: 3,034 x 2
+##    artistName    total_hrs
+##    &lt;chr&gt;             &lt;dbl&gt;
+##  1 Kany Garcia       21.1 
+##  2 Maluma            14.1 
+##  3 Khalid            13.0 
+##  4 Justin Bieber      9.95
+##  5 Bad Bunny          9.85
+##  6 J Balvin           9.45
+##  7 Farruko            7.70
+##  8 KAROL G            7.68
+##  9 Camilo             7.35
+## 10 Ozuna              7.33
+## # … with 3,024 more rows</code></pre>
+<pre class="r"><code># song with most no. of hours played
+fulldata %&gt;% select(trackName, artistName, msPlayed) %&gt;% 
+    group_by(trackName, artistName) %&gt;% summarize(total_hrs = sum(msPlayed)/3600000) %&gt;% 
+    arrange(-total_hrs)</code></pre>
+<pre><code>## # A tibble: 6,740 x 3
+## # Groups:   trackName [6,407]
+##    trackName                      artistName     total_hrs
+##    &lt;chr&gt;                          &lt;chr&gt;              &lt;dbl&gt;
+##  1 Hawái                          Maluma              4.13
+##  2 La Curiosidad                  Jay Wheeler         3.12
+##  3 Ay, DiOs Mío!                  KAROL G             2.71
+##  4 Intentions                     Justin Bieber       2.68
+##  5 Anaranjado                     Jowell &amp; Randy      2.68
+##  6 Favorito                       Camilo              2.27
+##  7 UN DIA (ONE DAY) (Feat. Tainy) J Balvin            2.22
+##  8 Loco - Remix                   Farruko             2.20
+##  9 Raro                           Nacho               2.17
+## 10 Te Olvidaré                    MYA                 2.12
+## # … with 6,730 more rows</code></pre>
+<pre class="r"><code>## Creating summary stats for each numeric variable
+## (msPlayed, TMIN, TMAX, and PRCP)
+
+# creating summary stats for msPlayed, Tmin, TMAX,
+# and PRCP overall
+fulldata %&gt;% select(msPlayed, TMIN, TMAX, PRCP) %&gt;% 
+    mutate(minPlayed = msPlayed/60000) %&gt;% summarize_all(mean)</code></pre>
+<pre><code>##   msPlayed     TMIN     TMAX       PRCP minPlayed
+## 1 148689.7 61.04288 83.91651 0.08989139  2.478162</code></pre>
+<pre class="r"><code>fulldata %&gt;% select(msPlayed, TMIN, TMAX, PRCP) %&gt;% 
+    mutate(minPlayed = msPlayed/60000) %&gt;% summarize_all(sd)</code></pre>
+<pre><code>##   msPlayed     TMIN     TMAX     PRCP minPlayed
+## 1 100321.7 14.03423 13.90044 0.313449  1.672028</code></pre>
+<pre class="r"><code>fulldata %&gt;% select(msPlayed, TMIN, TMAX, PRCP) %&gt;% 
+    mutate(minPlayed = msPlayed/60000) %&gt;% summarize_all(min)</code></pre>
+<pre><code>##   msPlayed TMIN TMAX PRCP minPlayed
+## 1        0    8   25    0         0</code></pre>
+<pre class="r"><code>fulldata %&gt;% select(msPlayed, TMIN, TMAX, PRCP) %&gt;% 
+    mutate(minPlayed = msPlayed/60000) %&gt;% summarize_all(max)</code></pre>
+<pre><code>##   msPlayed TMIN TMAX PRCP minPlayed
+## 1  2061307   83  108 2.37  34.35512</code></pre>
+<pre class="r"><code># creating summary stats for grouping by artistName
+# &amp; day of week
+fulldata %&gt;% select(msPlayed, TMIN, TMAX, PRCP, AWND, 
+    artistName, dayofweek) %&gt;% group_by(dayofweek, 
+    artistName) %&gt;% summarize(total_hrs = sum(msPlayed)/3600000, 
+    mean_tmin = mean(TMIN), mean_tmax = mean(TMAX), 
+    mean_prcp = mean(PRCP), mean_windsp = mean(AWND)) %&gt;% 
+    arrange(-total_hrs)</code></pre>
+<pre><code>## # A tibble: 6,443 x 7
+## # Groups:   dayofweek [7]
+##    dayofweek artistName      total_hrs mean_tmin mean_tmax mean_prcp mean_windsp
+##    &lt;ord&gt;     &lt;chr&gt;               &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;       &lt;dbl&gt;
+##  1 Fri       Kany Garcia          5.68      65.6      85.7    0.215         4.25
+##  2 Sat       Kany Garcia          5.31      63.3      87.2    0.121         2.66
+##  3 Sat       Maluma               4.51      59.5      80.6    0.265         4.17
+##  4 Sun       Kany Garcia          4.50      69.5      86.5    0.0348        4.61
+##  5 Tue       Khalid               4.38      70        89.3    0.0005        2.74
+##  6 Mon       Khalid               3.86      59.6      78.8    0             1.99
+##  7 Thu       The Daily            3.22      49.8      74.7    0.005         3.82
+##  8 Fri       Bossa Nova Jazz      3.05      70.6      85.9    0.560         5.01
+##  9 Sat       Bad Bunny            2.83      57.4      78.2    0.09          4.36
+## 10 Sun       Maluma               2.79      59.8      84.7    0.0606        4.54
+## # … with 6,433 more rows</code></pre>
+<pre class="r"><code># creating summary stats for grouping by trackName
+# &amp; day of week
+fulldata %&gt;% select(msPlayed, TMIN, TMAX, PRCP, AWND, 
+    trackName, dayofweek) %&gt;% group_by(dayofweek, trackName) %&gt;% 
+    summarize(total_hrs = sum(msPlayed)/3600000, mean_tmin = mean(TMIN), 
+        mean_tmax = mean(TMAX), mean_prcp = mean(PRCP), 
+        mean_windsp = mean(AWND)) %&gt;% arrange(-total_hrs)</code></pre>
+<pre><code>## # A tibble: 11,644 x 7
+## # Groups:   dayofweek [7]
+##    dayofweek trackName       total_hrs mean_tmin mean_tmax mean_prcp mean_windsp
+##    &lt;ord&gt;     &lt;chr&gt;               &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;       &lt;dbl&gt;
+##  1 Sun       Favorito            1.06       62.7      91.2   0.0584         4.20
+##  2 Sun       Loco - Remix        1.04       69.9      95.4   0.00522        3.58
+##  3 Sun       La Curiosidad       0.956      64.5      89.6   0.00130        3.90
+##  4 Sat       Hawái               0.943      63.7      88     0.232          3.27
+##  5 Thu       Intentions          0.895      66.1      91     0.0782         3.46
+##  6 Sun       TBT - Remix         0.878      70.3      94.5   0.00267        3.64
+##  7 Thu       The Field: The…     0.839      40        64     0              5.82
+##  8 Sun       Te Olvidaré         0.814      70.0      92.2   0.0015         4.96
+##  9 Sat       La Santa            0.803      60.7      79.9   0.0153         4.76
+## 10 Sat       La Curiosidad       0.792      70.2      93.5   0.0818         3.28
+## # … with 11,634 more rows</code></pre>
+<pre class="r"><code># creating summary stats for grouping by artist &amp;
+# month
+fulldata %&gt;% select(date, msPlayed, TMIN, TMAX, PRCP, 
+    AWND, artistName, dayofweek) %&gt;% group_by(artistName, 
+    month = floor_date(date, &quot;month&quot;)) %&gt;% summarize(total_hrs = sum(msPlayed)/3600000, 
+    mean_tmin = mean(TMIN), mean_tmax = mean(TMAX), 
+    mean_prcp = mean(PRCP), mean_windsp = mean(AWND)) %&gt;% 
+    arrange(-total_hrs)</code></pre>
+<pre><code>## # A tibble: 6,372 x 7
+## # Groups:   artistName [3,034]
+##    artistName     month      total_hrs mean_tmin mean_tmax mean_prcp mean_windsp
+##    &lt;chr&gt;          &lt;date&gt;         &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;       &lt;dbl&gt;
+##  1 Khalid         2020-04-01     10.0       66.1      86.0   0.00105        2.51
+##  2 Kany Garcia    2020-05-01      9.46      67.8      86.2   0.497          3.85
+##  3 Bossa Nova Ja… 2020-06-01      3.87      73.0      87.6   0.472          5.49
+##  4 Kany Garcia    2020-06-01      3.73      73.4      94.5   0.109          3.96
+##  5 Maluma         2020-08-01      3.68      73.9     100.    0.312          4.09
+##  6 Justin Bieber  2020-08-01      3.02      74.7     103.    0.0187         3.19
+##  7 The Daily      2020-11-01      2.94      58.1      83.4   0              3.35
+##  8 Ozuna          2020-10-01      2.87      57.9      84.1   0.0359         4.28
+##  9 Jerry Di       2020-08-01      2.87      76.8     103.    0              5.82
+## 10 Kany Garcia    2020-11-01      2.68      62.4      82.3   0.00944        3.51
+## # … with 6,362 more rows</code></pre>
+<pre class="r"><code># creating summary stats for grouping by trackName
+# &amp; month
+trackmonth &lt;- fulldata %&gt;% select(date, msPlayed, TMIN, 
+    TMAX, PRCP, AWND, trackName, dayofweek) %&gt;% group_by(trackName, 
+    month = floor_date(date, &quot;month&quot;)) %&gt;% summarize(total_hrs = sum(msPlayed)/3600000, 
+    mean_tmin = mean(TMIN), mean_tmax = mean(TMAX), 
+    mean_prcp = mean(PRCP), mean_windsp = mean(AWND)) %&gt;% 
+    arrange(-total_hrs)
+
+# creating summary stats by grouping by month &amp; day
+# of week
+monthday &lt;- fulldata %&gt;% select(date, msPlayed, TMIN, 
+    TMAX, PRCP, AWND, trackName, dayofweek) %&gt;% group_by(month = floor_date(date, 
+    &quot;month&quot;), dayofweek) %&gt;% summarize(total_hrs = sum(msPlayed)/3600000, 
+    mean_tmin = mean(TMIN), mean_tmax = mean(TMAX), 
+    mean_prcp = mean(PRCP), mean_windsp = mean(AWND)) %&gt;% 
+    arrange(month, dayofweek)
+
+# correlation matrix for numeric variables
+cormat &lt;- fulldata %&gt;% select(msPlayed, TMIN, TMAX, 
+    PRCP, AWND) %&gt;% cor(use = &quot;pair&quot;)</code></pre>
+</div>
+<div id="make-visualizations" class="section level2">
+<h2>Make visualizations</h2>
+<p>Most of the variables are only slightly negatively correlated. The only two variables that have a strong positive correlation are TMAX and TMIN.</p>
+<pre class="r"><code>## Correlation Heat Map of Numeric Variables
+tidycor &lt;- cormat %&gt;% as.data.frame() %&gt;% rownames_to_column(&quot;var1&quot;) %&gt;% 
+    pivot_longer(-1, names_to = &quot;var2&quot;, values_to = &quot;correlation&quot;)
+
+tidycor %&gt;% ggplot(aes(var1, var2, fill = correlation)) + 
+    geom_tile() + scale_fill_gradient2(low = &quot;red&quot;, 
+    mid = &quot;white&quot;, high = &quot;blue&quot;) + geom_text(aes(label = round(correlation, 
+    2)), color = &quot;black&quot;, size = 4)</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>This plot shows the total number of hours of Spotify played for each month. For each day of the week, the total number of hours were added up together and stacked into a column to show the total number of hours listened per month. Overall, April and October were the two months with the most hours listened. In terms of day of the week, July, September, and January, had Saturdays clocking in the most hours listened.</p>
+<pre class="r"><code>## Which months did I listen to more or less
+## Spotify?
+monthday %&gt;% mutate(dayofweek = as.factor(dayofweek)) %&gt;% 
+    ggplot(aes(month, total_hrs)) + geom_col(aes(fill = dayofweek)) + 
+    labs(x = &quot;Date&quot;, y = &quot;Hours of music playback&quot;) + 
+    scale_x_date(breaks = &quot;1 month&quot;, date_labels = &quot;%B %Y&quot;, 
+        expand = c(0, 0)) + theme(axis.text.x = element_text(angle = 45, 
+    hjust = 1)) + ggtitle(&quot;Which months did I listen to more or less Spotify?&quot;)</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-7-1.png" width="672" style="display: block; margin: auto;" />
+Each line on this plot represents a song that was played. My top three songs are highlighted in green, blue, and red. It looks like I listened to my favorite songs of the year the most during the month of August (where I actually did a road trip between Austin and Phoenix). While I still love these songs, my hours listened tapered off over time as I found new favorite songs.</p>
+<pre class="r"><code>## On what dates did I listen to my top 3 songs?
+trackmonth %&gt;% ggplot(aes(month, total_hrs, group = trackName)) + 
+    labs(x = &quot;Date&quot;, y = &quot;Hours of music playback&quot;) + 
+    scale_x_date(breaks = &quot;1 month&quot;, date_labels = &quot;%B %Y&quot;, 
+        expand = c(0, 0)) + theme(axis.text.x = element_text(angle = 45, 
+    hjust = 1)) + ggtitle(&quot;Which months did I listen to my top 3 songs?&quot;) + 
+    geom_line(aes(color = trackName)) + gghighlight(trackName == 
+    &quot;Hawái&quot; || trackName == &quot;La Curiosidad&quot; || trackName == 
+    &quot;Ay, DiOs Mío!&quot;)</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-8-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="perform-k-meanspam-clustering-on-numeric-variables" class="section level2">
+<h2>Perform k-means/PAM clustering on numeric variables</h2>
+<p>I performed PAM clustering on msPlayed and various weather-related numeric variables to see if there’s any regularity in the data. I tested up to five clusters to see what is the optimal number of clusters based on silhouette width. PAM clustering was computationally expensive on this dataset of 19428 observations.</p>
+<pre class="r"><code># PAM clustering
+PAM_clust &lt;- fulldata %&gt;% select(msPlayed, TMAX, TMIN, 
+    AWND, PRCP) %&gt;% scale() %&gt;% as.data.frame()
+
+sil_width &lt;- vector()
+
+for (i in 2:5) {
+    pam_fit &lt;- pam(PAM_clust, k = i)
+    sil_width[i] &lt;- pam_fit$silinfo$avg.width
+}
+
+ggplot() + geom_line(aes(x = 1:5, y = sil_width)) + 
+    scale_x_continuous(name = &quot;k&quot;, breaks = 1:5)</code></pre>
+<p>Here, the correlation matrix shows that msPlayed has the strongest (negative) correlation with min temperature for the day, TMIN, and the weakest correlation with precipitation, PRCP.The group 1 (red) captures amount of time listened to Spotify on days where TMIN is about 60 degrees or colder, and group 2(blue) caputres the amount of time listened when TMIN ishigher than 60 degrees.</p>
+<pre class="r"><code>pam1 &lt;- pam(PAM_clust, 2)
+
+fulldata %&gt;% mutate(cluster = as.factor(pam1$clustering)) %&gt;% 
+    ggpairs(columns = c(&quot;msPlayed&quot;, &quot;TMAX&quot;, &quot;TMIN&quot;, 
+        &quot;AWND&quot;, &quot;PRCP&quot;), aes(color = cluster))</code></pre>
+<p>The average silhouette width 0.29 means that the structure of the clusters is weak and could be artificial. Therefore, the PAM clustering with two clusters did not fit the data very well.</p>
+<p>The mean of each numeric variable is shown in the final table. Cluster 1 are longer songs (probably podcasts) I listened when temperatures and wind speed were low, but precipitation was higher. Cluster 2 are shorter duration plays (songs) when temperatures and wind speed are higher, and precipitation is lower.</p>
+<pre class="r"><code>plot(pam1, which = 2, border = NA)
+windows()
+
+pamclust &lt;- PAM_clust %&gt;% mutate(cluster = as.factor(pam1$clustering))
+pamclust %&gt;% group_by(cluster) %&gt;% summarize_all(mean)</code></pre>
 </div>
 
             
