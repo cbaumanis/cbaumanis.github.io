@@ -13,11 +13,13 @@ Here is my post!
 
 
 ```{r}
+#r
 library(reticulate)
 hi <- "hello"
 ```
 
 ```{python}
+#python
 hi = "world"
 print(r.hi,hi)
 ```

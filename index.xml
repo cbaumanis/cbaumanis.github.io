@@ -23,7 +23,7 @@
       
       <guid>/post/2021/05/09/my-second-post/</guid>
       <description> Here is my post!
-library(reticulate) hi &amp;lt;- &amp;quot;hello&amp;quot; hi = &amp;quot;world&amp;quot; print(r.hi,hi) ## hello world </description>
+#r library(reticulate) hi &amp;lt;- &amp;quot;hello&amp;quot; #python hi = &amp;quot;world&amp;quot; print(r.hi,hi) ## hello world </description>
     </item>
     
     <item>
